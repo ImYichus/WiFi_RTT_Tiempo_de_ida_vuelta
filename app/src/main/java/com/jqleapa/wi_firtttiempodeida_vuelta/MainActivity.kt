@@ -10,6 +10,8 @@ import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.animation.*
+import androidx.compose.animation.core.*
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
@@ -25,7 +27,11 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.scale
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -131,7 +137,7 @@ class MainActivity : ComponentActivity() {
     }
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalAnimationApi::class)
 @Composable
 fun PantallaRtt(
     estadoHardware: String,
@@ -191,28 +197,90 @@ fun PantallaRtt(
 
             Spacer(modifier = Modifier.height(24.dp))
 
-            // Botón Principal
-            Button(
-                onClick = onEscanearClick,
-                enabled = botonHabilitado && !estaEscaneando,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(64.dp),
-                shape = RoundedCornerShape(20.dp),
-                elevation = ButtonDefaults.buttonElevation(defaultElevation = 4.dp)
+            // Efecto de Radar y Botón Principal
+            Box(
+                contentAlignment = Alignment.Center,
+                modifier = Modifier.fillMaxWidth().height(120.dp)
             ) {
                 if (estaEscaneando) {
-                    CircularProgressIndicator(
-                        modifier = Modifier.size(24.dp),
-                        color = MaterialTheme.colorScheme.onPrimary,
-                        strokeWidth = 2.dp
-                    )
-                    Spacer(modifier = Modifier.width(12.dp))
-                    Text("Midiendo distancia...")
-                } else {
-                    Icon(Icons.Default.Refresh, contentDescription = null)
-                    Spacer(modifier = Modifier.width(8.dp))
-                    Text("INICIAR ESCANEO RTT", fontWeight = FontWeight.ExtraBold, fontSize = 16.sp)
+                    RadarAnimation()
+                }
+
+                // Animación de pulso cuando está listo
+                val infiniteTransition = rememberInfiniteTransition(label = "pulse")
+                val pulseScale by infiniteTransition.animateFloat(
+                    initialValue = 1f,
+                    targetValue = if (botonHabilitado && !estaEscaneando) 1.05f else 1f,
+                    animationSpec = infiniteRepeatable(
+                        animation = tween(1200, easing = FastOutSlowInEasing),
+                        repeatMode = RepeatMode.Reverse
+                    ),
+                    label = "scale"
+                )
+
+                val gradientBrush = Brush.horizontalGradient(
+                    colors = if (estaEscaneando) {
+                        listOf(MaterialTheme.colorScheme.secondary, MaterialTheme.colorScheme.tertiary)
+                    } else {
+                        listOf(MaterialTheme.colorScheme.primary, Color(0xFF6200EE))
+                    }
+                )
+
+                Button(
+                    onClick = onEscanearClick,
+                    enabled = botonHabilitado && !estaEscaneando,
+                    modifier = Modifier
+                        .fillMaxWidth(0.9f)
+                        .height(64.dp)
+                        .scale(pulseScale)
+                        .graphicsLayer {
+                            shadowElevation = 8.dp.toPx()
+                            shape = RoundedCornerShape(20.dp)
+                            clip = true
+                        },
+                    contentPadding = PaddingValues(0.dp),
+                    colors = ButtonDefaults.buttonColors(containerColor = Color.Transparent),
+                    shape = RoundedCornerShape(20.dp),
+                    elevation = ButtonDefaults.buttonElevation(defaultElevation = 0.dp)
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .background(gradientBrush),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        AnimatedContent(
+                            targetState = estaEscaneando,
+                            transitionSpec = {
+                                fadeIn(animationSpec = tween(300)) + slideInVertically { it } with
+                                        fadeOut(animationSpec = tween(300)) + slideOutVertically { -it }
+                            },
+                            label = "buttonContent"
+                        ) { escaneando ->
+                            if (escaneando) {
+                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                    CircularProgressIndicator(
+                                        modifier = Modifier.size(24.dp),
+                                        color = MaterialTheme.colorScheme.onPrimary,
+                                        strokeWidth = 2.dp
+                                    )
+                                    Spacer(modifier = Modifier.width(12.dp))
+                                    Text("Midiendo...", color = Color.White, fontWeight = FontWeight.Bold)
+                                }
+                            } else {
+                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                    Icon(Icons.Default.Refresh, contentDescription = null, tint = Color.White)
+                                    Spacer(modifier = Modifier.width(8.dp))
+                                    Text(
+                                        "INICIAR ESCANEO RTT",
+                                        color = Color.White,
+                                        fontWeight = FontWeight.ExtraBold,
+                                        fontSize = 16.sp
+                                    )
+                                }
+                            }
+                        }
+                    }
                 }
             }
 
@@ -259,6 +327,53 @@ fun PantallaRtt(
             }
         }
     }
+}
+
+@Composable
+fun RadarAnimation() {
+    val infiniteTransition = rememberInfiniteTransition(label = "radar")
+    
+    val pulse1 by infiniteTransition.animateFloat(
+        initialValue = 0f,
+        targetValue = 1f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(2000, easing = LinearEasing),
+            repeatMode = RepeatMode.Restart
+        ),
+        label = "pulse1"
+    )
+    
+    val pulse2 by infiniteTransition.animateFloat(
+        initialValue = 0f,
+        targetValue = 1f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(2000, delayMillis = 1000, easing = LinearEasing),
+            repeatMode = RepeatMode.Restart
+        ),
+        label = "pulse2"
+    )
+
+    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+        RadarCircle(pulse1)
+        RadarCircle(pulse2)
+    }
+}
+
+@Composable
+fun RadarCircle(progress: Float) {
+    Box(
+        modifier = Modifier
+            .size((70 + (200 * progress)).dp)
+            .graphicsLayer {
+                alpha = (1f - progress).coerceIn(0f, 1f)
+                scaleX = 0.5f + (0.5f * progress)
+                scaleY = 0.5f + (0.5f * progress)
+            }
+            .background(
+                color = MaterialTheme.colorScheme.primary.copy(alpha = 0.3f),
+                shape = CircleShape
+            )
+    )
 }
 
 @Composable
@@ -320,7 +435,8 @@ fun CardResultado(dispositivo: DispositivoRtt) {
                 progress = progreso,
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(8.dp),
+                    .height(8.dp)
+                    .clip(RoundedCornerShape(4.dp)),
                 color = if (distanciaFloat < 5f) Color(0xFF4CAF50) else MaterialTheme.colorScheme.primary,
                 trackColor = MaterialTheme.colorScheme.surfaceVariant,
                 strokeCap = androidx.compose.ui.graphics.StrokeCap.Round
