@@ -134,6 +134,14 @@ fun PantallaRtt(
             .padding(top = 32.dp)
     ) {
         Text(
+            text = "WiFi RTT",
+            style = MaterialTheme.typography.headlineMedium,
+            fontWeight = FontWeight.Bold
+        )
+
+        Spacer(modifier = Modifier.height(16.dp))
+
+        Text(
             text = estadoHardware,
             fontWeight = FontWeight.Bold,
             modifier = Modifier.padding(bottom = 16.dp)
@@ -144,13 +152,17 @@ fun PantallaRtt(
             enabled = botonHabilitado,
             modifier = Modifier.fillMaxWidth()
         ) {
-            Text("Escanear y Medir Distancia RTT")
+            Text(
+                "Escanear y Medir Distancia RTT",
+                fontWeight = FontWeight.Bold
+            )
         }
 
         Spacer(modifier = Modifier.height(16.dp))
 
         Text(
             text = resultadosTexto,
+            fontWeight = FontWeight.Bold,
             modifier = Modifier
                 .fillMaxSize()
                 .verticalScroll(rememberScrollState())
